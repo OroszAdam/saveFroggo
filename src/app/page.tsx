@@ -100,8 +100,7 @@ const Page = () => {
 
 
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const audioRef = React.useRef<HTMLAudioElement>(new Audio('/music/goof.mp3'))
-  const branchBreakSound = React.useRef<HTMLAudioElement>(new Audio('/music/fall.ogg')); // Load your sound file
+  const audioRef = React.useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     if (audioRef.current) {
@@ -120,7 +119,6 @@ const Page = () => {
       setGameOver(true);
       setGameStarted(false);
       setIsFalling(true); // Trigger falling animation
-      branchBreakSound.current.play(); // Play the branch break sound
     }
     return () => clearInterval(timer);
   }, [gameStarted, timeRemaining, gameOver]);
@@ -167,7 +165,7 @@ const Page = () => {
   };
   return (
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden', margin: 0 }}>
-      <audio ref={audioRef} src="music/goof.mp3" loop/>
+      <audio ref={audioRef} src="music/goofy.mp3" loop/>
       <Canvas
         style={{ height: '100%', width: '100%' }}
         camera={{
