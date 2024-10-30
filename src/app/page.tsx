@@ -1,91 +1,14 @@
 "use client"; // Declare this component as a Client Component
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import React, { useState, useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three-stdlib';
+import { StaticModel } from './StaticModel';
+import { FroggoModel } from './FroggoModel';
 
 const HEAD_INITIAL_POSITION = new THREE.Vector3(0, 0, 0);
 const BRANCH_INITIAL_POSITION = new THREE.Vector3(0, 0, 0);
-
-interface StaticModelProps {
-  path: string; // Path to the model file
-  position?: THREE.Vector3;
-  scale?: [number, number, number]; // Scale if you need to resize
-  isFalling: boolean
-}
-
-const StaticModel: React.FC<StaticModelProps> = ({ position, path, scale = [1, 1, 1], isFalling }) => {
-  const gltf = useLoader(GLTFLoader, path);
-  const branchRef = useRef<THREE.Group | null>(null); // Reference for the branch model
-
-  useFrame(() => {
-    if (isFalling === true && branchRef.current) {
-      branchRef.current.position.y -= 0.1; // Adjust fall speed as needed
-      if (branchRef.current.position.y <= -5) { // Stop falling when below a certain point
-        branchRef.current.position.y = -5; // Prevent falling below this point
-      }
-    }
-  });
-  return <primitive ref={branchRef} object={gltf.scene} position={position} scale={scale} />;
-};
-
-interface FroggoModelProps {
-  position: THREE.Vector3;
-  scale?: [number, number, number];
-  isFalling: boolean
-}
-
-const FroggoModel: React.FC<FroggoModelProps> = ({ position, scale = [1, 1, 1], isFalling }) => {
-  const gltf = useLoader(GLTFLoader, '/models/froggo.glb');
-  const dogRef = React.useRef<THREE.Group | null>(null);
-
-  const [headBone, setHeadBone] = useState<THREE.Bone | null>(null);
-
-  useEffect(() => {
-    if (gltf && gltf.scene) {
-      gltf.scene.traverse((child) => {
-        if (child.name === 'HEAD' && child instanceof THREE.Bone) {
-          setHeadBone(child as THREE.Bone);
-        }
-      });
-      dogRef.current = gltf.scene;
-    }
-  }, [gltf]);
-
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      setMouse({
-        x: (event.clientX / window.innerWidth) * 2 - 1,
-        y: -(event.clientY / window.innerHeight) * 2 + 1,
-      });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  useFrame(({ camera }) => {
-    if (headBone) {
-      const vector = new THREE.Vector3(mouse.x, mouse.y, 0.9).unproject(camera);
-      headBone.lookAt(vector);
-      headBone.rotation.x += +Math.PI / 3;
-      headBone.rotation.y += +Math.PI / 10;
-    }
-  });
-  useFrame(() => {
-    if (isFalling === true && dogRef.current) {
-      dogRef.current.position.y -= 0.1; // Adjust fall speed as needed
-      if (dogRef.current.position.y <= -5) { // Stop falling when below a certain point
-        dogRef.current.position.y = -5; // Prevent falling below this point
-      }
-    }
-  });
-
-  return <primitive ref={dogRef} object={gltf.scene} position={position} scale={scale} />;
-};
 
 const Page = () => {
   const [dogPosition, setDogPosition] = useState(HEAD_INITIAL_POSITION.clone());
@@ -102,12 +25,16 @@ const Page = () => {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = React.useRef<HTMLAudioElement>(null)
 
-  useEffect(() => {
+  const toggleMusic = () => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.5; // Adjust volume as needed
-      audioRef.current.play(); // Start playing music on load
+      if (isMusicPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsMusicPlaying(!isMusicPlaying);
     }
-  }, []);
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -153,19 +80,9 @@ const Page = () => {
     setIsFalling(false)
   };
 
-  const toggleMusic = () => {
-    if (audioRef.current) {
-      if (isMusicPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsMusicPlaying(!isMusicPlaying);
-    }
-  };
   return (
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden', margin: 0 }}>
-      <audio ref={audioRef} src="music/goofy.mp3" loop/>
+      <audio ref={audioRef} src="music/goofy.mp3" loop />
       <Canvas
         style={{ height: '100%', width: '100%' }}
         camera={{
@@ -175,85 +92,85 @@ const Page = () => {
       >
         <ambientLight color={"white"} intensity={1.2} />
         <directionalLight intensity={1.3} />
-        <FroggoModel position={dogPosition} isFalling={isFalling} />
-        <StaticModel path="/models/tree.glb" position={branchPosition} scale={[1, 1, 1]} isFalling={false}/>
-        <StaticModel path="/models/treebranch.glb" position={branchPosition} scale={[1, 1, 1]} isFalling={isFalling}/>
+        <FroggoModel path="/models/froggo.glb" position={dogPosition} isFalling={isFalling} />
+        <StaticModel path="/models/tree.glb" position={branchPosition} scale={[1, 1, 1]} isFalling={false} />
+        <StaticModel path="/models/treebranch.glb" position={branchPosition} scale={[1, 1, 1]} isFalling={isFalling} />
 
         {/* UI Overlay */}
         <Html fullscreen>
-  <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      justifyContent: 'space-between', 
-      height: '100%', 
-      textAlign: 'center'
-    }}>
-    
-    <h1>SAVE FROGGO</h1>
-    
-    <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        flexDirection: 'column', 
-        marginBottom: '50px' // Adjust as needed for spacing
-      }}>
-      
-      {!gameStarted && !gameOver ? (
-        <div>
-          <input
-            type="text"
-            placeholder="Choice 1"
-            value={choice1}
-            onChange={(e) => setChoice1(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Choice 2"
-            value={choice2}
-            onChange={(e) => setChoice2(e.target.value)}
-          />
-          <div>
-            <button onClick={handleStart} disabled={!choice1 || !choice2 || choice1 === choice2}>
-              Start
-            </button>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            height: '100%',
+            textAlign: 'center'
+          }}>
+
+            <h1>SAVE FROGGO</h1>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexDirection: 'column',
+              marginBottom: '50px' // Adjust as needed for spacing
+            }}>
+
+              {!gameStarted && !gameOver ? (
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Choice 1"
+                    value={choice1}
+                    onChange={(e) => setChoice1(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Choice 2"
+                    value={choice2}
+                    onChange={(e) => setChoice2(e.target.value)}
+                  />
+                  <div>
+                    <button onClick={handleStart} disabled={!choice1 || !choice2 || choice1 === choice2}>
+                      Start
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {!gameOver ? (
+                    <>
+                      <button onClick={playAnimationLeft}>{choice1}</button>
+                      <button onClick={playAnimationRight}>{choice2}</button>
+                      <p>Time Remaining: {timeRemaining} seconds</p>
+                    </>
+                  ) : (
+                    <h1>{selectedChoice ? 'Well played!' : 'Game Over!'}</h1>
+                  )}
+                </div>
+              )}
+              {selectedChoice && <p>You selected: {selectedChoice}</p>}
+              {gameOver && <button onClick={restartGame}>Restart</button>}
+              <p>Help making decisions with gamification (and to save Froggo).</p>
+              {/* Music Button */}
+              <div style={{
+                position: 'absolute',
+                bottom: '20px', // Distance from the bottom of the screen
+                left: '20px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <div onClick={toggleMusic} style={{ cursor: 'pointer' }}>
+                  {!isMusicPlaying ? "🔇" : "🔊"} {/* Toggle icon based on mute state */}
+                </div>
+              </div>
+            </div>
+
+
+
           </div>
-        </div>
-      ) : (
-        <div>
-          {!gameOver ? (
-            <>
-              <button onClick={playAnimationLeft}>{choice1}</button>
-              <button onClick={playAnimationRight}>{choice2}</button>
-              <p>Time Remaining: {timeRemaining} seconds</p>
-            </>
-          ) : (
-            <h1>{selectedChoice ? 'Well played!' : 'Game Over!'}</h1>
-          )}
-        </div>
-      )}
-      {selectedChoice && <p>You selected: {selectedChoice}</p>}
-      {gameOver && <button onClick={restartGame}>Restart</button>}
-      <p>Help making decisions with gamification (and to save Froggo).</p>
-          {/* Music Button */}
-    <div style={{ 
-        position: 'absolute', 
-        bottom: '20px', // Distance from the bottom of the screen
-        left: '20px', 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-      }}>
-      <div onClick={toggleMusic} style={{cursor: 'pointer'}}>
-        {!isMusicPlaying ? "🔇" : "🔊"} {/* Toggle icon based on mute state */}
-      </div>
-    </div>
-    </div>
-
-
-
-  </div>
-</Html>
+        </Html>
 
       </Canvas>
     </div>
